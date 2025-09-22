@@ -48,6 +48,18 @@ impl From<u12> for usize {
         item.value as usize
     }
 }
+impl From<usize> for u12 {
+    fn from(item: usize) -> u12 {
+        let item = item as u16;
+        Self::from(item)
+    }
+}
+impl From<i32> for u12 {
+    fn from(item: i32) -> u12 {
+        let item = item as u16;
+        Self::from(item)
+    }
+}
 impl From<u12> for u16 {
     fn from(item: u12) -> u16 {
         item.value

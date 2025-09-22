@@ -43,7 +43,7 @@ impl IndexMut<u12> for Memory {
 }
 
 impl Memory {
-    fn default() -> Memory {
+    pub fn default() -> Memory {
         Memory {
             memory: [0.into(); 4096],
         }

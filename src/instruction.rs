@@ -1,13 +1,28 @@
-use crate::unsigned_integer_12::u12;
+use crate::{unsigned_integer_12::u12};
 
-#[derive(PartialEq, Debug)]
-pub enum OpCode{
+/// Logical AND between Y and Acc
+/// Where Y is some core memory location.
+struct InstrAnd{
+    instruction_time: u32,
+    
+}
+impl InstrAnd{
+    pub fn new() -> InstrAnd{
+        InstrAnd{
+            instruction_time: 18000
+        }
+    }
+    pub fn execute(){}
+}
+
+#[derive(PartialEq, Debug, Clone, Copy)]
+pub enum OpCode {
     AND = 0,
     TAD = 1,
-    ISZ = 2, 
-    DCA = 3, 
+    ISZ = 2,
+    DCA = 3,
     JMS = 4,
-    JMP = 5, 
+    JMP = 5,
     IOT = 6,
     OPERATE = 7,
 }
@@ -24,23 +39,24 @@ impl From<u12> for OpCode {
             5 => OpCode::JMP,
             6 => OpCode::IOT,
             7 => OpCode::OPERATE,
-            _ => panic!("Not a Opcode.")
+            _ => panic!("Not a Opcode."),
         }
-
     }
 }
 
 pub struct Instruction {
     value: u12,
+    opcode: OpCode,
+
 }
 impl From<u12> for Instruction {
     fn from(item: u12) -> Instruction {
-        Instruction { value: item }
+        Instruction { value: item , opcode: OpCode::from(item)}
     }
 }
 impl Instruction {
     pub fn get_opcode(&self) -> OpCode {
-        self.value.into()
+        self.opcode
     }
 }
 
@@ -68,5 +84,4 @@ mod tests {
         let x = Instruction::from(value);
         assert_eq!(OpCode::AND, x.get_opcode())
     }
-
 }
