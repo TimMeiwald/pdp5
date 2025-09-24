@@ -1,23 +1,18 @@
+mod consts;
 mod instruction;
 mod memory;
-mod unsigned_integer_12;
 mod rim_format_reader;
+mod unsigned_integer_12;
 
 use std::fs;
 use std::io::Error;
 use std::path::Path;
 
-use crate::instruction::{Instruction, OpCode};
+use crate::consts::*;
+use crate::instruction::OpCode;
 use crate::memory::Memory;
 use crate::rim_format_reader::RimFormat;
 use crate::unsigned_integer_12::u12;
-
-// Address of PseudoRegister Program Counter.
-const PC_ADDRESS: u16 = 0;
-
-const EVENT_TIME_NS: u32 = 1000; // The timing for pulses to external IOT devices. 
-const CYCLE_TIME_NS: u32 = 6 * EVENT_TIME_NS; /* We use nanoseconds not microseconds so we can easily
-accelerate the simulation for test and debug purposes. */
 
 struct HWRegisters {
     AC: u12, // 12 bit Accumulator
@@ -55,31 +50,31 @@ struct PseudoRegisters {
     // Therefore this is just a named wrapper for PseudoRegister functions
 }
 impl PseudoRegisters {
-    fn load_pc(state: &mut MachineState, instruction: Option<Instruction>) {
-        state.registers.hardware_registers.MB = state.memory[PC_ADDRESS.into()];
-        match instruction {
-            Some(instruction) => {
-                if instruction.get_opcode() == OpCode::OPERATE {
-                    todo!(
-                        "If it's a group two micro instruction with the skip flag set
-            We need to increment by 2 else increment by 1."
-                    );
-                    // Increment MB by 1
-                    state.registers.hardware_registers.MB += 1.into();
-                } else {
-                    // Increment MB by 1
-                    state.registers.hardware_registers.MB += 1.into();
-                }
-            }
-            None => {
-                    // Increment MB by 1, Start of program so no initial instruction loaded yet. 
-                    state.registers.hardware_registers.MB += 1.into();
-            }
-        }
+//     fn load_pc(state: &mut MachineState, skip: bool) {
+//         state.registers.hardware_registers.MB = state.memory[PC_ADDRESS.into()];
+//         match instruction {
+//             Some(instruction) => {
+//                 if instruction.get_opcode() == OpCode::OPERATE {
+//                     todo!(
+//                         "If it's a group two micro instruction with the skip flag set
+//             We need to increment by 2 else increment by 1."
+//                     );
+//                     // Increment MB by 1
+//                     state.registers.hardware_registers.MB += 1.into();
+//                 } else {
+//                     // Increment MB by 1
+//                     state.registers.hardware_registers.MB += 1.into();
+//                 }
+//             }
+//             None => {
+//                 // Increment MB by 1, Start of program so no initial instruction loaded yet.
+//                 state.registers.hardware_registers.MB += 1.into();
+//             }
+//         }
 
-        // Write MB back into PC
-        state.memory[PC_ADDRESS.into()] = state.registers.hardware_registers.MB;
-    }
+//         // Write MB back into PC
+//         state.memory[PC_ADDRESS.into()] = state.registers.hardware_registers.MB;
+    // }
 
     fn set_pc(state: &mut MachineState, value: u12) {
         state.memory[PC_ADDRESS.into()] = value;
@@ -97,11 +92,11 @@ impl Registers {
     }
 }
 
-struct Instructions {
-    mr: MemoryReferenceInstructions, // Memory reference instructions store or retrieve data from core memory,
-    aug: AugmentedInstructions,      // While augmented do not.
-}
-struct MemoryReferenceInstructions {}
+// struct Instructions {
+//     mr: MemoryReferenceInstructions, // Memory reference instructions store or retrieve data from core memory,
+//     aug: AugmentedInstructions,      // While augmented do not.
+// }
+// struct MemoryReferenceInstructions {}
 struct AugmentedInstructions {}
 
 /// State machine for the computer state
@@ -220,19 +215,26 @@ impl MachineState {
     // pub fn step_instruction(&mut self) {
     //     let current_instr = PseudoRegisters::load_pc(state, instruction);
     // }
-    pub fn start_program(&mut self){
-        PseudoRegisters::load_pc(self, None);
-        let mb = self.registers.hardware_registers.MB;
-        let current_instr = self.memory[mb];
-        println!("Current Instruction: {:?} at Address: {mb:#05x}", current_instr);
-        let instr = Instruction::from(current_instr);
-        println!("{:?}", instr);
-
+    pub fn start_program(&mut self) {
+        let mut count = 0;
+        loop {
+            // PseudoRegisters::load_pc(self, None);
+            let mb = self.registers.hardware_registers.MB;
+            let current_instr = self.memory[mb];
+            println!(
+                "Current Instruction: {:?} at Address: {mb:#05x}",
+                current_instr
+            );
+            count += 1;
+            if count >= 2000{
+                break;
+            }
+        }
     }
 }
 
 fn main() {
-    let mut buf: [u12; 4096] = [0.into();  4096];
+    let mut buf: [u12; 4096] = [0.into(); 4096];
     let path = Path::new("example_code/binhalt-pm/binhalt-pm");
     let data = RimFormat::load_from_file(path, &mut buf).expect("Dont expect an IO error");
 
@@ -241,14 +243,8 @@ fn main() {
 
     // Program start address, can be anything really but must be loaded into PC prior to start.
     let start_address = 0o07600;
+
     pdp5.set_initial_start_address(start_address);
 
-    // pdp5.start_program();
-
-    // for i in 0..500{
-    //     let start_address = i;
-    //     pdp5.set_initial_start_address(start_address);
-
-    //     pdp5.start_program()
-    // }
+    pdp5.start_program();
 }

@@ -2,8 +2,8 @@ use std::{
     fmt::Debug,
     ops::{Index, IndexMut},
 };
-
-use crate::{memory, unsigned_integer_12::u12};
+use crate::instruction::MemoryReferenceInstruction;
+use crate::{instruction, memory, unsigned_integer_12::u12};
 pub struct Memory {
     memory: [u12; 4096], // 4096 words of 12 bits
                          // We represent each 12 bit word as 16 bits
@@ -46,6 +46,15 @@ impl IndexMut<u12> for Memory {
 impl Memory {
     pub fn default(buf: [u12; 4096]) -> Memory {
         Memory { memory: buf }
+    }
+
+    pub fn load(&self, instruction: MemoryReferenceInstruction) -> u12 {
+        if instruction.get_addressing_page_0(){
+            
+        }
+        else{
+
+        }
     }
 }
 

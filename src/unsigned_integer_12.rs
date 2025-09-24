@@ -1,17 +1,24 @@
 use std::{
     fmt::{Binary, Debug, LowerHex, Octal},
-    ops::{AddAssign, Index, IndexMut},
+    ops::{AddAssign, BitAnd, Index, IndexMut},
 };
 
 #[allow(non_camel_case_types)]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub struct u12 {
     value: u16,
+}
+
+impl BitAnd for u12 {
+    type Output = u12;
+    fn bitand(self, rhs: Self) -> Self::Output {
+        (self.value & rhs.value).into()
+    }
 }
 impl AddAssign for u12{
     fn add_assign(&mut self, rhs: Self) {
         self.value += rhs.value;
-        debug_assert!(self.value <= 4095, "Overflow occurred")
+        debug_assert!(self.value <= 4095, "Index Out of Bounds or Overflow occurred")
     }
 }
 impl Index<u12> for [u12]{
