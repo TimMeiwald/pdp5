@@ -13,10 +13,10 @@ impl Debug for Memory {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Memory:")?;
         let mut count = 0;
-        const CHUNK_SIZE: usize = 10;
+        const CHUNK_SIZE: usize = 32;
         for value in self.memory.chunks(CHUNK_SIZE) {
             if count % 1 == 0 {
-                write!(f, "\nAddress: {:03x}, Data: ", count)?;
+                write!(f, "\nAddress: {:#03x}, Data: ", count)?;
             }
             let _: Vec<_> = value
                 .iter()
@@ -27,6 +27,7 @@ impl Debug for Memory {
                 .collect();
             count += CHUNK_SIZE;
         }
+        writeln!(f, "")?;
         Ok(())
     }
 }
@@ -43,10 +44,8 @@ impl IndexMut<u12> for Memory {
 }
 
 impl Memory {
-    pub fn default() -> Memory {
-        Memory {
-            memory: [0.into(); 4096],
-        }
+    pub fn default(buf: [u12; 4096]) -> Memory {
+        Memory { memory: buf }
     }
 }
 
@@ -56,7 +55,8 @@ mod tests {
 
     #[test]
     fn test_read_addr_0() {
-        let mem = Memory::default();
+        let buf: [u12; 4096] = [0.into(); 4096];
+        let mem = Memory::default(buf);
         let address: u12 = 0.into();
         let result = mem[address];
         println!("{result:?}");
@@ -64,7 +64,8 @@ mod tests {
     }
     #[test]
     fn test_read_addr_max() {
-        let mem = Memory::default();
+        let buf: [u12; 4096] = [0.into(); 4096];
+        let mem = Memory::default(buf);
         let address: u12 = u16::MAX.into();
         let result = mem[address];
         println!("{result:?}");
@@ -73,7 +74,8 @@ mod tests {
 
     #[test]
     fn test_write_addr_0() {
-        let mut mem = Memory::default();
+        let buf: [u12; 4096] = [0.into(); 4096];
+        let mut mem = Memory::default(buf);
         let address: u12 = 0.into();
         mem[address] = 100.into();
         let result = mem[address];
@@ -82,7 +84,8 @@ mod tests {
     }
     #[test]
     fn test_write_addr_max() {
-        let mut mem = Memory::default();
+        let buf: [u12; 4096] = [0.into(); 4096];
+        let mut mem = Memory::default(buf);
         let address: u12 = u16::MAX.into();
         mem[address] = 100.into();
         let result = mem[address];

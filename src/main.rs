@@ -1,14 +1,19 @@
 mod instruction;
 mod memory;
 mod unsigned_integer_12;
+mod rim_format_reader;
+
+use std::fs;
+use std::io::Error;
+use std::path::Path;
 
 use crate::instruction::{Instruction, OpCode};
 use crate::memory::Memory;
+use crate::rim_format_reader::RimFormat;
 use crate::unsigned_integer_12::u12;
 
 // Address of PseudoRegister Program Counter.
 const PC_ADDRESS: u16 = 0;
-
 
 const EVENT_TIME_NS: u32 = 1000; // The timing for pulses to external IOT devices. 
 const CYCLE_TIME_NS: u32 = 6 * EVENT_TIME_NS; /* We use nanoseconds not microseconds so we can easily
@@ -20,8 +25,8 @@ struct HWRegisters {
     MB: u12, // 12 bit Memory Buffer register, used for buffering between registers and memory.
     MA: u12, // 12 bit, Memory Address register, Currently selected address for reading or writing into memory.
     IR: u8,  // 4 bit Instruction Register, Information is loaded into the IR from the
-             // memory buffer register during a Fetch cycle.
-    SR: u12  // Switch Register. 
+    // memory buffer register during a Fetch cycle.
+    SR: u12, // Switch Register.
 }
 impl HWRegisters {
     pub fn default() -> HWRegisters {
@@ -50,25 +55,33 @@ struct PseudoRegisters {
     // Therefore this is just a named wrapper for PseudoRegister functions
 }
 impl PseudoRegisters {
-    fn load_pc(state: &mut MachineState, instruction: Instruction) {
+    fn load_pc(state: &mut MachineState, instruction: Option<Instruction>) {
         state.registers.hardware_registers.MB = state.memory[PC_ADDRESS.into()];
-
-        if instruction.get_opcode() == OpCode::OPERATE {
-            todo!(
-                "If it's a group two micro instruction with the skip flag set
+        match instruction {
+            Some(instruction) => {
+                if instruction.get_opcode() == OpCode::OPERATE {
+                    todo!(
+                        "If it's a group two micro instruction with the skip flag set
             We need to increment by 2 else increment by 1."
-            );
-            // Increment MB by 1
-            state.registers.hardware_registers.MB += 1.into();
-        } else {
-            // Increment MB by 1
-            state.registers.hardware_registers.MB += 1.into();
+                    );
+                    // Increment MB by 1
+                    state.registers.hardware_registers.MB += 1.into();
+                } else {
+                    // Increment MB by 1
+                    state.registers.hardware_registers.MB += 1.into();
+                }
+            }
+            None => {
+                    // Increment MB by 1, Start of program so no initial instruction loaded yet. 
+                    state.registers.hardware_registers.MB += 1.into();
+            }
         }
+
         // Write MB back into PC
         state.memory[PC_ADDRESS.into()] = state.registers.hardware_registers.MB;
     }
 
-    fn set_pc(state: &mut MachineState, value: u12){
+    fn set_pc(state: &mut MachineState, value: u12) {
         state.memory[PC_ADDRESS.into()] = value;
     }
 }
@@ -158,8 +171,8 @@ struct MachineState {
 impl MachineState {
     /// Everything is zeroed. Factory settings effectively
     /// (I think.)
-    pub fn default() -> MachineState {
-        let memory = Memory::default();
+    pub fn default(buf: [u12; 4096]) -> MachineState {
+        let memory = Memory::default(buf);
         MachineState {
             registers: Registers::default(),
             memory: memory,
@@ -181,39 +194,61 @@ impl MachineState {
         }
     }
 
-    pub fn set_initial_start_address(&mut self, address: usize){
+    pub fn flash_from_file(&mut self, path: &Path) -> Result<(), Error> {
+        let data: Vec<u8> = fs::read(path)?;
+        assert!(data.len() <= 4095, "Data is larger than available memory.");
+        for (index, byte) in data.iter().enumerate() {
+            self.memory[index.into()] = byte.into()
+        }
+        Ok(())
+    }
+
+    pub fn set_initial_start_address(&mut self, address: usize) {
         PseudoRegisters::set_pc(self, address.into());
-
     }
 
-
-    /// IOT pulses are at 1 microsecond interval 
+    /// IOT pulses are at 1 microsecond interval
     /// And presumably approximately 1 microsecond long
-    /// Allowing 3 pulses a cycle. 
-    pub fn step_event(&mut self){
-
-    }
+    /// Allowing 3 pulses a cycle.
+    pub fn step_event(&mut self) {}
 
     // An instruction can take multiple cycles.
-    // This allows us to inspect the state to ensure 
-    // things happen at the right time. 
-    pub fn step_cycle(&mut self){
+    // This allows us to inspect the state to ensure
+    // things happen at the right time.
+    pub fn step_cycle(&mut self) {}
+    // // Each instruction can be made up with multiple cycles.
+    // pub fn step_instruction(&mut self) {
+    //     let current_instr = PseudoRegisters::load_pc(state, instruction);
+    // }
+    pub fn start_program(&mut self){
+        PseudoRegisters::load_pc(self, None);
+        let mb = self.registers.hardware_registers.MB;
+        let current_instr = self.memory[mb];
+        println!("Current Instruction: {:?} at Address: {mb:#05x}", current_instr);
+        let instr = Instruction::from(current_instr);
+        println!("{:?}", instr);
 
     }
-    // Each instruction can be made up with multiple cycles. 
-    pub fn step_instruction(&mut self){
-
-    }
-
 }
 
 fn main() {
-    let mut pdp5 = MachineState::default();
-    let bytes = [0; 4096];
-    pdp5.flash(bytes);
-    // Program start address, can be anything really but must be loaded into PC prior to start. 
-    let start_address = 100;
+    let mut buf: [u12; 4096] = [0.into();  4096];
+    let path = Path::new("example_code/binhalt-pm/binhalt-pm");
+    let data = RimFormat::load_from_file(path, &mut buf).expect("Dont expect an IO error");
+
+    let mut pdp5 = MachineState::default(*data);
+    print!("{:?}", pdp5.memory);
+
+    // Program start address, can be anything really but must be loaded into PC prior to start.
+    let start_address = 0o07600;
     pdp5.set_initial_start_address(start_address);
 
-    pdp5.step_cycle()
+    // pdp5.start_program();
+
+    // for i in 0..500{
+    //     let start_address = i;
+    //     pdp5.set_initial_start_address(start_address);
+
+    //     pdp5.start_program()
+    // }
 }

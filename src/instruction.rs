@@ -44,6 +44,7 @@ impl From<u12> for OpCode {
     }
 }
 
+#[derive(Debug)]
 pub struct Instruction {
     value: u12,
     opcode: OpCode,

@@ -1,6 +1,6 @@
 use std::{
-    fmt::{Binary, Debug, LowerHex},
-    ops::{AddAssign, Index},
+    fmt::{Binary, Debug, LowerHex, Octal},
+    ops::{AddAssign, Index, IndexMut},
 };
 
 #[allow(non_camel_case_types)]
@@ -14,10 +14,25 @@ impl AddAssign for u12{
         debug_assert!(self.value <= 4095, "Overflow occurred")
     }
 }
-
+impl Index<u12> for [u12]{
+    type Output = u12;
+    fn index(&self, index: u12) -> &Self::Output {
+        &self[*&usize::from(index)]
+    }
+}
+impl IndexMut<u12> for [u12]{
+    fn index_mut(&mut self, index: u12) -> &mut Self::Output {
+        &mut self[*&usize::from(index)]
+    }
+}
 impl Binary for u12 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Binary::fmt(&self.value, f)
+    }
+}
+impl Octal for u12 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Octal::fmt(&self.value, f)
     }
 }
 impl LowerHex for u12{
@@ -46,6 +61,11 @@ impl From<u16> for u12 {
 impl From<u12> for usize {
     fn from(item: u12) -> usize {
         item.value as usize
+    }
+}
+impl From<&u8> for u12 {
+    fn from(item: &u8) -> u12 {
+        u12::from(*item as u16)
     }
 }
 impl From<usize> for u12 {
