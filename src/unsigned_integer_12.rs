@@ -1,23 +1,46 @@
 use std::{
     fmt::{Binary, Debug, LowerHex, Octal},
-    ops::{AddAssign, BitAnd, Index, IndexMut},
+    ops::{Add, AddAssign, BitAnd, Index, IndexMut, Mul, Shr},
 };
+const MASK: u16 = 0b0000_1111_1111_1111;
 
 #[allow(non_camel_case_types)]
 #[derive(Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub struct u12 {
     value: u16,
 }
+impl Shr for u12{
+    type Output = u12;
+    fn shr(self, rhs: Self) -> Self::Output {
+        let result = self.value >> rhs.value;
+        (result & MASK).into()
 
+    }
+}
 impl BitAnd for u12 {
     type Output = u12;
     fn bitand(self, rhs: Self) -> Self::Output {
         (self.value & rhs.value).into()
     }
 }
+impl Add for u12{
+    type Output = u12;
+    fn add(self, rhs: Self) -> Self::Output {
+        let result = u16::add(self.value, rhs.value);
+        (result & MASK).into()
+    }
+}
+impl Mul for u12{
+    type Output = u12;
+    fn mul(self, rhs: Self) -> Self::Output {
+        let result = u16::mul(self.value, rhs.value);
+        (result & MASK).into()
+    }
+}
 impl AddAssign for u12{
     fn add_assign(&mut self, rhs: Self) {
         self.value += rhs.value;
+        self.value = self.value & MASK;
         debug_assert!(self.value <= 4095, "Index Out of Bounds or Overflow occurred")
     }
 }
@@ -59,8 +82,7 @@ impl Debug for u12 {
 
 impl From<u16> for u12 {
     fn from(item: u16) -> Self {
-        let mask: u16 = 0b0000_1111_1111_1111;
-        let value = item & mask;
+        let value = item & MASK;
         debug_assert!(value <= 4095);
         u12 { value }
     }

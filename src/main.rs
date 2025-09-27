@@ -9,7 +9,6 @@ use std::io::Error;
 use std::path::Path;
 
 use crate::consts::*;
-use crate::instruction::OpCode;
 use crate::memory::Memory;
 use crate::rim_format_reader::RimFormat;
 use crate::unsigned_integer_12::u12;
